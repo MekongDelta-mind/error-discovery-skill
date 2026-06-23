@@ -1,32 +1,13 @@
 # Error discovery skill
 
-This skill makes an AI agent run interactive error analysis on any dataset of
-LLM outputs or traces. The full instructions are in `SKILL.md`.
+This skill makes an AI agent run error analysis on a dataset. Point it at a
+JSONL/CSV/JSON file of LLM outputs or traces, and it builds a review app, picks
+diverse samples, and watches your annotations as you go.
 
-The agent studies the data, builds a review UI, selects diverse samples, and
-monitors the human's annotations live. It categorizes free-text notes into
-failure modes, tracks coverage, and proposes new samples to fill gaps.
+You read and leave free-text notes. The agent sorts them into failure modes,
+tracks coverage, and picks new samples to fill gaps.
 
-## What it does
-
-1. Reads the dataset and figures out the content type (articles, agent traces,
-   code, structured output, etc.).
-2. Designs visual encoding based on what varies in the data. Uses Gestalt
-   principles (color for categories, spacing for hierarchy, opacity for
-   importance).
-3. Builds a single-file HTML review app served by a Python stdlib server. No
-   dependencies.
-4. Clusters the data and picks a diverse initial sample (cluster reps + random
-   picks).
-5. Runs an interactive loop: monitors annotations, categorizes failure modes,
-   proposes new samples to increase coverage.
-
-The human's job is to read and leave free-text notes. The agent organizes those
-notes into a failure mode taxonomy.
-
-## What is in here
-
-- `SKILL.md`: the skill, with all phases and rules.
+The full instructions are in `SKILL.md`.
 
 ## How to use it
 
@@ -48,6 +29,3 @@ Then point the agent at a dataset:
 ```
 Can you help me do error analysis on traces.jsonl?
 ```
-
-The agent builds the review app, opens it in the browser, and starts the
-interactive loop.
