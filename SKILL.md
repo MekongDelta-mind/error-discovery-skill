@@ -1,6 +1,6 @@
 ---
 name: error-discovery
-description: Interactive error analysis on any dataset of LLM traces. The agent studies the data, designs a review UI using visual encoding principles (Gestalt, color, opacity, spacing), monitors annotations live, categorizes failure modes, and proposes new samples to increase coverage.
+description: Run error analysis on a dataset. Build a review UI, select diverse samples, monitor annotations, and organize failure modes.
 ---
 
 # Error Discovery Skill
