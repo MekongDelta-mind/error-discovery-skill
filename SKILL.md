@@ -125,7 +125,9 @@ Map each dimension of variation to exactly one visual channel. Don't use the sam
 
 1. **Article/content view** — the main review interface where the human reads and annotates.
 2. **Map view** — a 2D scatter plot (PCA or UMAP projection) of all records, showing clusters, which items are in the sample, and which have been annotated. Clicking a sample node navigates to its content view.
-3. **Patterns view** — a treemap of failure modes the agent has categorized so far. Each block is a failure mode, sized by how many annotations it contains. Inside each block, list the individual notes. Clicking a note navigates to that annotation in the content view. This view is the agent's live taxonomy — it updates as the agent categorizes new annotations.
+3. **Progress view** — two sections:
+   - **Failure modes**: a treemap of modes the agent has categorized so far. Each block is a failure mode, sized by annotation count. Inside each block, list the notes. Clicking a note navigates to that annotation in the content view.
+   - **Agent suggestions to review**: a list of pending suggestions the agent found by scanning for known failure modes. Grouped by record. Clicking one navigates to that spot in the article, where the human can accept or dismiss it.
 
 **Content view design — apply the visual encoding from Phase 2:**
 
