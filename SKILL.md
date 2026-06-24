@@ -113,16 +113,19 @@ Map each dimension of variation to exactly one visual channel. Don't use the sam
   - `GET /api/annotations` — returns current annotations
   - `POST /api/annotations` — app saves annotations on every change
   - `GET /api/graph` — returns 2D projection of all records for the cluster map
+  - `GET /api/patterns` — returns the agent's current failure mode taxonomy
+  - `POST /api/patterns` — agent pushes updated taxonomy
 - **On-disk files** in an `error_discovery_data/` directory:
   - `samples.json`, `annotations.json`, `graph.json`
 - The HTML app auto-saves to the server on every annotation, and polls for new samples.
 
 ### HTML app structure
 
-**Two views**, toggled from the top bar:
+**Three views**, toggled from the top bar:
 
 1. **Article/content view** — the main review interface where the human reads and annotates.
 2. **Map view** — a 2D scatter plot (PCA or UMAP projection) of all records, showing clusters, which items are in the sample, and which have been annotated. Clicking a sample node navigates to its content view.
+3. **Patterns view** — a treemap of failure modes the agent has categorized so far. Each block is a failure mode, sized by how many annotations it contains. Inside each block, list the individual notes. Clicking a note navigates to that annotation in the content view. This view is the agent's live taxonomy — it updates as the agent categorizes new annotations.
 
 **Content view design — apply the visual encoding from Phase 2:**
 
