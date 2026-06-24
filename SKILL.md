@@ -133,7 +133,7 @@ Map each dimension of variation to exactly one visual channel. Don't use the sam
 2. **Map view** — a 2D scatter plot (PCA or UMAP projection) of all records, showing clusters, which items are in the sample, and which have been annotated. Clicking a sample node navigates to its content view.
 3. **Progress view** — two sections:
    - **Failure modes**: a treemap of modes the agent has categorized so far. Each block is a failure mode, sized by annotation count. Inside each block, list the notes. Clicking a note navigates to that annotation in the content view.
-   - **Agent suggestions to review**: a list of pending suggestions the agent found by scanning for known failure modes. Grouped by record. Clicking one navigates to that spot in the article, where the human can accept or dismiss it.
+   - **Agent suggestions to review**: a list of pending suggestions with checkboxes. Each row shows the failure mode, quoted text, and source record. Clicking the text navigates to that spot in the article. A "Select all" checkbox at the top, plus "Accept selected" and "Dismiss selected" bulk action buttons. This lets the reviewer select all, uncheck the few they disagree with, and accept the rest in one click.
 
 **Content view design — apply the visual encoding from Phase 2:**
 
