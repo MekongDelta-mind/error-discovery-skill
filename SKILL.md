@@ -231,7 +231,16 @@ After the human reviews a batch:
 3. Push new samples to the server. The app shows a banner.
 4. Tell the human what was added and why.
 
-### 5e: Report and converge
+### 5e: Multi-pass re-review
+
+Don't treat review as one-shot. The reviewer's criteria shift as they see more data (criteria drift). Build re-review into the loop:
+
+1. **Track when each record was reviewed** and which failure modes existed at that time.
+2. **After discovering 2-3 new modes**, suggest the reviewer revisit earlier records. Those records were reviewed before the new modes were in the reviewer's head — they likely contain instances that were missed.
+3. **Agent suggestions handle part of this automatically** (5c scans already-reviewed records). But the human should also re-read with fresh eyes, because some things only a human notices.
+4. In the Progress view, surface which already-reviewed records have new agent suggestions — these are the highest-priority re-review candidates.
+
+### 5f: Report and converge
 
 Periodically:
 - Report the failure mode taxonomy with confirmed and suggested counts.
@@ -246,7 +255,7 @@ Periodically:
 3. **Live feedback loop.** The agent monitors and reacts as annotations come in.
 4. **Guard against blind spots.** Always include random samples alongside cluster-based ones.
 5. **Adapt to the data.** The rendering, features, clustering, and visual encoding all derive from what the data actually is.
-6. **Iterate, don't one-shot.** Criteria drift is real — the reviewer's sense of good and bad shifts as they see more. When new failure modes are discovered, scan all records (including already-reviewed ones) for instances. Multiple passes over the same data surface different things.
-7. **Agent suggests, human confirms.** The agent's pattern matching will have false positives. That's fine. Suggestions are visually distinct and require human accept/dismiss. Favor recall over precision.
 6. **Encode dimensions visually.** Map key dimensions to visual channels (color, spacing, typography). Use Gestalt principles so perception does the work.
 7. **Keep the UI minimal.** Only surface information the reviewer needs to judge the content. Structural outlier flags in the header, not inline. No pipeline metadata (cluster IDs, sampling method, percentile bars).
+8. **Iterate, don't one-shot.** Criteria drift is real — the reviewer's sense of good and bad shifts as they see more. When new failure modes are discovered, scan all records (including already-reviewed ones) for instances. Multiple passes over the same data surface different things.
+9. **Agent suggests, human confirms.** The agent's pattern matching will have false positives. That's fine. Suggestions are visually distinct and require human accept/dismiss. Favor recall over precision.
