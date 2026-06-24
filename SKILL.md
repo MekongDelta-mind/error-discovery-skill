@@ -7,6 +7,12 @@ description: Run error analysis on a dataset. Build a review UI, select diverse 
 
 You are running an interactive error analysis session. The user has a dataset (JSONL, CSV, JSON, etc.) of LLM outputs or traces and wants to discover failure modes by reviewing samples.
 
+This skill has two parts:
+- **This file**: understand the data, design the UI, build it, select samples (phases 1-4)
+- **[review-loop.md](review-loop.md)**: run the interactive review session (phase 5)
+
+Read this file first to build everything. Once the app is running and the human starts reviewing, follow [review-loop.md](review-loop.md).
+
 ## Phase 1: Understand the domain and data
 
 Before building anything, study the dataset thoroughly.
@@ -49,11 +55,10 @@ Think about what differs **between** data points and **within** each data point.
 - Author/role of each segment (human vs agent vs system vs tool)
 - Content type of each segment (natural language vs code vs JSON vs thinking)
 - Importance/relevance of each segment (boilerplate system prompt vs the actual response)
-- Anomaly level (how unusual is this word/phrase/pattern compared to the dataset distribution)
 
 ### 1d: Think about what "bad" means
 
-What are plausible failure categories in this domain? Seed a few mentally but expect the human to discover most of them. This informs what to pre-compute for visual emphasis.
+What are plausible failure categories in this domain? Seed a few mentally but expect the human to discover most of them.
 
 ## Phase 2: Design the visual encoding
 
@@ -79,7 +84,6 @@ Map each dimension of variation to exactly one visual channel. Don't use the sam
 - Reduce opacity only for content the human genuinely does not need to read: repeated boilerplate that is identical across records, verbose tool schemas, auto-generated headers. Think: "if I removed this, would the human miss anything?"
 - Do NOT mute content by role. System messages, tool results, and thinking blocks can all contain the actual bug. Mute only specific content that is redundant or mechanical, regardless of which role produced it.
 - Normal content: full opacity.
-- Anomalous or noteworthy content: highlighted background (not just higher opacity — use a background tint or underline to make it pop).
 
 **Spacing**: hierarchical structure.
 - Tight spacing (4-8px) between items within a logical group (e.g., consecutive messages in one "step" of an agent trace).
@@ -115,9 +119,11 @@ Map each dimension of variation to exactly one visual channel. Don't use the sam
   - `GET /api/graph` — returns 2D projection of all records for the cluster map
   - `GET /api/patterns` — returns the agent's current failure mode taxonomy
   - `POST /api/patterns` — agent pushes updated taxonomy
+  - `GET /api/suggestions` — returns agent-suggested annotations
+  - `POST /api/suggestions` — agent pushes suggestions
 - **On-disk files** in an `error_discovery_data/` directory:
-  - `samples.json`, `annotations.json`, `graph.json`
-- The HTML app auto-saves to the server on every annotation, and polls for new samples.
+  - `samples.json`, `annotations.json`, `graph.json`, `patterns.json`, `suggestions.json`
+- The HTML app auto-saves to the server on every annotation, and polls for new samples and suggestions.
 
 ### HTML app structure
 
@@ -158,13 +164,15 @@ Map each dimension of variation to exactly one visual channel. Don't use the sam
   - Each section labeled.
 
 - **Inline annotation**: select text: floating popover with text input: Enter to save: span highlighted. Hovering shows note. Click to edit/delete.
+- **Agent suggestions**: visually distinct from human annotations — dashed border, muted tint, "agent" tag. Human can accept (promotes to annotation) or dismiss. Tooltip must be interactive (hoverable) so the user can click accept/dismiss buttons.
 - **No quality labels, no dropdowns, no structured forms.** Free-text notes only.
 - **Auto-save** to server on every change. localStorage backup.
-- **Poll for new samples** every ~10s. Show a banner when the agent adds new ones.
+- **Poll for new samples and suggestions** periodically. Show a banner/toast when new ones arrive.
 
 **Map view:**
 - 2D scatter of all records from PCA/UMAP projection.
-- Nodes colored by primary categorical dimension (label, or role distribution, or outcome).
+- Color by cluster (matches hull colors), not by label.
+- Shape to distinguish categories (e.g., circles vs squares for AI vs human).
 - Sample items: larger nodes with dark border.
 - Annotated items: distinct color (e.g., orange).
 - Cluster hulls or convex boundaries as subtle background shapes.
@@ -183,73 +191,4 @@ Map each dimension of variation to exactly one visual channel. Don't use the sam
 
 ## Phase 5: Run the interactive review loop
 
-This phase is **ongoing and interactive**. The agent is an active participant.
-
-### 5a: Launch and monitor
-
-1. Start the Python server in the background.
-2. Open the app in the browser.
-3. Tell the user the app is ready. Explain the interaction briefly.
-4. **Monitor the annotations file** using the Monitor tool. React when new annotations come in.
-
-### 5b: Process annotations as they arrive
-
-When new annotations appear:
-1. Read all annotations.
-2. Categorize each into a failure mode — match to existing or create new.
-3. Maintain a running taxonomy: `{mode_name: {description, count, example_ids, example_quotes[]}}`.
-4. Track which records have been reviewed and which clusters/dimensions are covered.
-
-### 5c: Agent scans for new failure modes across all records
-
-When a new failure mode is discovered (or an existing one gets clearer), the agent scans **all** records for instances of that mode — not just unreviewed ones. This is the key inner loop.
-
-**Spawn one background subagent per failure mode.** The subagent gets the mode name, description, and example quotes, reads through all records, and returns a list of suggested annotations: `{record_id, text, start, end}`. One mode = one subagent, not one per record. Multiple modes run in parallel. This happens in the background while the human keeps reviewing. When subagents return, merge their suggestions and push to the server.
-
-Surface results in two buckets:
-1. **Already-annotated records**: "I found what looks like [mode] in record N, which you already reviewed." The reviewer may have missed it because the mode wasn't in their head yet (criteria drift).
-2. **Not-yet-annotated records**: "These unreviewed records also seem to have this pattern." Add them to the sample queue.
-
-Agent suggestions are visually distinct from human annotations — different highlight color (e.g., dashed border, muted tint) with an "agent" tag. The human can accept (promotes to a real annotation) or dismiss. Agent suggestions are never treated as ground truth.
-
-Store suggestions separately from human annotations:
-- `GET/POST /api/suggestions` — agent-suggested annotations
-- Format: `[{record_id, text, start, end, mode, status: "pending"|"accepted"|"dismissed"}]`
-
-Lean toward recall over precision. The cost of a false positive (human dismisses it) is low. The cost of a missed instance (never surfaces) is high.
-
-### 5d: Propose new samples to increase coverage
-
-After the human reviews a batch:
-1. **Cover gaps**: sample from unreviewed clusters, topics, or feature regions.
-2. **Random exploration**: always include a few random picks.
-3. Push new samples to the server. The app shows a banner.
-4. Tell the human what was added and why.
-
-### 5e: Encourage re-review
-
-Don't treat review as one-shot. The reviewer's criteria shift as they see more data (criteria drift).
-
-The agent handles part of this: when a new mode is discovered, a background subagent scans all records and pushes suggestions (5c). Suggestions that land on already-reviewed records surface in the Progress view queue.
-
-But the agent can't catch everything. After the reviewer has gone through a batch and discovered new modes, explicitly encourage them to re-read earlier records with fresh eyes. Say something like: "You've found 3 new failure modes since you reviewed records 0-5. Worth a second pass — you'll likely spot things you missed the first time."
-
-### 5f: Report and converge
-
-Periodically:
-- Report the failure mode taxonomy with confirmed and suggested counts.
-- Report coverage: records reviewed, clusters/dimensions covered, what remains.
-- Track convergence: are new records revealing new modes, or mostly repeats?
-- When discovery rate drops, suggest stopping or narrowing focus.
-
-## Key principles
-
-1. **The human notices, the agent organizes.** Free-text notes: structured taxonomy. Don't make the human categorize.
-2. **The agent drives coverage.** The agent proposes new samples based on what's been found and what's missing.
-3. **Live feedback loop.** The agent monitors and reacts as annotations come in.
-4. **Guard against blind spots.** Always include random samples alongside cluster-based ones.
-5. **Adapt to the data.** The rendering, features, clustering, and visual encoding all derive from what the data actually is.
-6. **Encode dimensions visually.** Map key dimensions to visual channels (color, spacing, typography). Use Gestalt principles so perception does the work.
-7. **Keep the UI minimal.** Only surface information the reviewer needs to judge the content. Structural outlier flags in the header, not inline. No pipeline metadata (cluster IDs, sampling method, percentile bars).
-8. **Iterate, don't one-shot.** Criteria drift is real — the reviewer's sense of good and bad shifts as they see more. When new failure modes are discovered, scan all records (including already-reviewed ones) for instances. Multiple passes over the same data surface different things.
-9. **Agent suggests, human confirms.** The agent's pattern matching will have false positives. That's fine. Suggestions are visually distinct and require human accept/dismiss. Favor recall over precision.
+Once the app is running and the human starts reviewing, follow **[review-loop.md](review-loop.md)** for the ongoing interactive session.
