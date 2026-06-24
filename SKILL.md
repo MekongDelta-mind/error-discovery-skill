@@ -198,19 +198,34 @@ When new annotations appear:
 3. Maintain a running taxonomy: `{mode_name: {description, count, example_ids, example_quotes[]}}`.
 4. Track which records have been reviewed and which clusters/dimensions are covered.
 
-### 5c: Propose new samples to increase coverage
+### 5c: Agent scans for new failure modes across all records
+
+When a new failure mode is discovered (or an existing one gets clearer), the agent scans **all** records for instances of that mode — not just unreviewed ones. This is the key inner loop.
+
+Surface results in two buckets:
+1. **Already-annotated records**: "I found what looks like [mode] in record N, which you already reviewed." The reviewer may have missed it because the mode wasn't in their head yet (criteria drift).
+2. **Not-yet-annotated records**: "These unreviewed records also seem to have this pattern." Add them to the sample queue.
+
+Agent suggestions are visually distinct from human annotations — different highlight color (e.g., dashed border, muted tint) with an "agent" tag. The human can accept (promotes to a real annotation) or dismiss. Agent suggestions are never treated as ground truth.
+
+Store suggestions separately from human annotations:
+- `GET/POST /api/suggestions` — agent-suggested annotations
+- Format: `[{record_id, text, start, end, mode, status: "pending"|"accepted"|"dismissed"}]`
+
+Lean toward recall over precision. The cost of a false positive (human dismisses it) is low. The cost of a missed instance (never surfaces) is high.
+
+### 5d: Propose new samples to increase coverage
 
 After the human reviews a batch:
-1. **Find more instances of known failure modes**: search remaining records for matching patterns.
-2. **Cover gaps**: sample from unreviewed clusters, topics, or feature regions.
-3. **Random exploration**: always include a few random picks.
-4. Push new samples to the server. The app shows a banner.
-5. Tell the human what was added and why.
+1. **Cover gaps**: sample from unreviewed clusters, topics, or feature regions.
+2. **Random exploration**: always include a few random picks.
+3. Push new samples to the server. The app shows a banner.
+4. Tell the human what was added and why.
 
-### 5d: Report and converge
+### 5e: Report and converge
 
 Periodically:
-- Report the failure mode taxonomy with counts and examples.
+- Report the failure mode taxonomy with confirmed and suggested counts.
 - Report coverage: records reviewed, clusters/dimensions covered, what remains.
 - Track convergence: are new records revealing new modes, or mostly repeats?
 - When discovery rate drops, suggest stopping or narrowing focus.
@@ -222,5 +237,7 @@ Periodically:
 3. **Live feedback loop.** The agent monitors and reacts as annotations come in.
 4. **Guard against blind spots.** Always include random samples alongside cluster-based ones.
 5. **Adapt to the data.** The rendering, features, clustering, and visual encoding all derive from what the data actually is.
+6. **Iterate, don't one-shot.** Criteria drift is real — the reviewer's sense of good and bad shifts as they see more. When new failure modes are discovered, scan all records (including already-reviewed ones) for instances. Multiple passes over the same data surface different things.
+7. **Agent suggests, human confirms.** The agent's pattern matching will have false positives. That's fine. Suggestions are visually distinct and require human accept/dismiss. Favor recall over precision.
 6. **Encode dimensions visually.** Map key dimensions to visual channels (color, spacing, typography). Use Gestalt principles so perception does the work.
 7. **Keep the UI minimal.** Only surface information the reviewer needs to judge the content. Structural outlier flags in the header, not inline. No pipeline metadata (cluster IDs, sampling method, percentile bars).
