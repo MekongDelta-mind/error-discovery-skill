@@ -1,16 +1,20 @@
 # Review Loop
 
-This is the ongoing interactive phase. The app is running, the human is reviewing. You are an active participant.
+This is the ongoing interactive phase. The app is running and the human is reviewing. You are an active participant.
 
-## The two loops: breadth and depth
+## The two modes: breadth and depth
 
-Error discovery alternates between two modes:
+Error discovery alternates between two modes.
 
-**Breadth**: cover as much of the dataset as possible. Diverse samples, random picks, fill cluster gaps. The goal is finding *different* failure modes.
+**Breadth**: cover as much of the dataset as possible. Pick diverse samples, fill cluster gaps, add random records. The goal is to find different failure modes.
 
-**Depth**: once you find a mode, go deep. Scan all records for instances, re-review earlier items, refine the definition. The goal is understanding *one* failure mode thoroughly.
+**Depth**: once a mode is found, examine it thoroughly. Scan all records for instances, re-review earlier items, refine the definition. The goal is to understand one failure mode well.
 
-The outer loop alternates: go broad until you find something, then go deep on it, then go broad again to find the next thing.
+Alternate between these. Review broadly until you find something, then examine that mode in depth, then go broad again.
+
+## Progress updates
+
+Tell the user what you are doing at each step during the review loop. When you categorize annotations, say what modes you found. When you spawn a subagent, say which failure mode it is scanning for. When you propose new samples, say why you chose them. Do not go silent while background work runs.
 
 ## Launch and monitor
 
@@ -23,28 +27,28 @@ The outer loop alternates: go broad until you find something, then go deep on it
 
 When new annotations appear:
 1. Read all annotations.
-2. Categorize each into a failure mode — match to existing or create new.
+2. Categorize each into a failure mode. Match to an existing mode or create a new one.
 3. Maintain a running taxonomy: `{mode_name: {description, count, example_ids, example_quotes[]}}`.
 4. Push the updated taxonomy to `POST /api/patterns`.
-5. Track which records have been reviewed and which clusters/dimensions are covered.
+5. Track which records have been reviewed and which clusters or dimensions are covered.
 
-## Go deep: scan for failure mode instances
+## Depth mode: scan for failure mode instances
 
-This is the depth loop. When a new failure mode is discovered (or an existing one gets clearer), scan **all** records for instances — not just unreviewed ones.
+When you discover a new failure mode (or an existing one becomes clearer), scan **all** records for instances. Include both reviewed and unreviewed records.
 
-**Spawn one background subagent per failure mode.** The subagent gets the mode name, description, and example quotes, reads through all records, and returns a list of suggested annotations: `{record_id, text, start, end}`. One mode = one subagent, not one per record. Multiple modes run in parallel. This happens in the background while the human keeps reviewing.
+**Spawn one background subagent per failure mode.** Give the subagent the mode name, description, and example quotes. It reads through all records and returns a list of suggested annotations: `{record_id, text, start, end}`. One mode = one subagent, not one per record. Multiple modes can run in parallel. This happens in the background while the human keeps reviewing.
 
-When subagents return, merge their suggestions and push to `POST /api/suggestions`. The UI picks them up automatically and shows them in the Progress view queue and as purple highlights in the article view.
+When subagents return, merge their suggestions and push to `POST /api/suggestions`. The UI polls for new suggestions automatically and shows them in the Progress view queue and as purple highlights in the article view.
 
-Suggestions land in two buckets:
-1. **Already-reviewed records**: the reviewer may have missed this because the mode wasn't in their head yet (criteria drift).
-2. **Unreviewed records**: new coverage. Add them to the sample if they aren't already.
+There are two kinds of suggestions:
+1. **Already-reviewed records**: the reviewer may have missed an instance because the mode was not yet in their head when they read the record (criteria drift).
+2. **Unreviewed records**: new coverage. Add these records to the sample if they are not already in it.
 
-Agent suggestions are never ground truth. The human accepts or dismisses them. Lean toward recall over precision — the cost of a false positive (dismissed) is low, the cost of a miss is high.
+Agent suggestions are not ground truth. The human accepts or dismisses each one. Favor recall over precision. Dismissing a false positive is quick. Missing a real instance is costly.
 
-## Go broad: propose new samples
+## Breadth mode: propose new samples
 
-This is the breadth loop. After the human reviews a batch:
+After the human reviews a batch:
 1. **Cover gaps**: sample from unreviewed clusters, topics, or feature regions.
 2. **Random exploration**: always include a few random picks.
 3. Push new samples to `POST /api/samples`. The app shows a banner.
@@ -52,24 +56,24 @@ This is the breadth loop. After the human reviews a batch:
 
 ## Encourage re-review
 
-Don't treat review as one-shot. The reviewer's criteria shift as they see more data (criteria drift).
+Do not treat review as one pass. The reviewer's criteria shift as they see more data (criteria drift).
 
-The agent handles part of this automatically: background subagents scan already-reviewed records and push suggestions. But the agent can't catch everything. After the reviewer has gone through a batch and discovered new modes, explicitly encourage them to re-read earlier records with fresh eyes. Say something like: "You've found 3 new failure modes since you reviewed records 0-5. Worth a second pass — you'll likely spot things you missed the first time."
+The agent handles part of this automatically. Background subagents scan already-reviewed records and push suggestions. But the agent cannot catch everything. After the reviewer has gone through a batch and found new modes, explicitly encourage them to re-read earlier records. Say something like: "You've found 3 new failure modes since you reviewed records 0 through 5. Worth a second pass. You will likely spot things you missed the first time."
 
 ## Report and converge
 
 Periodically:
 - Report the failure mode taxonomy with confirmed and suggested counts.
-- Report coverage: records reviewed, clusters/dimensions covered, what remains.
-- Track convergence: are new records revealing new modes, or mostly repeats?
-- When discovery rate drops, suggest stopping or narrowing focus.
+- Report coverage: records reviewed, clusters or dimensions covered, what remains.
+- Track convergence: are new records mostly repeats of known modes, or are they revealing new ones?
+- When the rate of new discoveries drops, suggest stopping or narrowing focus.
 
 ## Key principles
 
-1. **The human notices, the agent organizes.** Free-text notes become structured taxonomy. Don't make the human categorize.
-2. **The agent drives coverage.** The agent proposes new samples based on what's been found and what's missing.
-3. **Live feedback loop.** The agent monitors and reacts as annotations come in.
-4. **Guard against blind spots.** Always include random samples alongside cluster-based ones.
-5. **Iterate, don't one-shot.** Criteria drift is real. Multiple passes over the same data surface different things.
-6. **Agent suggests, human confirms.** Suggestions are visually distinct and require accept/dismiss. Favor recall over precision.
-7. **Breadth then depth, repeat.** Go broad to find modes, go deep to understand them, go broad again.
+1. **The human notices, the agent organizes.** Free-text notes become a structured taxonomy. Do not make the human categorize.
+2. **The agent proposes coverage.** Propose new samples based on what has been found and what is missing.
+3. **Live feedback loop.** Monitor and react as annotations come in.
+4. **Include random samples.** Always include random picks alongside cluster-based ones so you do not miss what the clustering did not capture.
+5. **Multiple passes.** The reviewer's criteria shift over time. Encourage re-review of earlier records.
+6. **Agent suggests, human confirms.** Suggestions are visually distinct and require accept or dismiss. Favor recall over precision.
+7. **Breadth then depth, repeat.** Review broadly to find modes, examine each mode in depth, then go broad again.
