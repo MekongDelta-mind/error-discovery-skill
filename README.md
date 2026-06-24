@@ -15,6 +15,8 @@ JSONL/CSV/JSON file of LLM outputs or traces, and it:
 5. Runs an interactive loop: monitors annotations, categorizes failure modes,
    proposes new samples to increase coverage.
 
+![Error Discovery Skill Workflow](workflow.png)
+
 You read and leave free-text notes. The agent sorts them into failure modes,
 tracks coverage, and picks new samples to fill gaps.
 
