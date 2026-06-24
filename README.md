@@ -1,8 +1,19 @@
 # Error discovery skill
 
 This skill makes an AI agent run error analysis on a dataset. Point it at a
-JSONL/CSV/JSON file of LLM outputs or traces, and it builds a review app, picks
-diverse samples, and watches your annotations as you go.
+JSONL/CSV/JSON file of LLM outputs or traces, and it:
+
+1. Reads the dataset and figures out the content type (articles, agent traces,
+   code, structured output, etc.).
+2. Designs visual encoding based on what varies in the data. Uses Gestalt
+   principles (color for categories, spacing for hierarchy, opacity for
+   importance).
+3. Builds a single-file HTML review app served by a Python stdlib server. No
+   dependencies.
+4. Clusters the data and picks a diverse initial sample (cluster reps + random
+   picks).
+5. Runs an interactive loop: monitors annotations, categorizes failure modes,
+   proposes new samples to increase coverage.
 
 You read and leave free-text notes. The agent sorts them into failure modes,
 tracks coverage, and picks new samples to fill gaps.
