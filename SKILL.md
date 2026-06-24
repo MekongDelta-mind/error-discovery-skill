@@ -204,12 +204,7 @@ When new annotations appear:
 
 When a new failure mode is discovered (or an existing one gets clearer), the agent scans **all** records for instances of that mode — not just unreviewed ones. This is the key inner loop.
 
-**Use subagents (Agent tool) to parallelize this.** For each failure mode, spawn a subagent that:
-- Takes the failure mode name, description, and example quotes as context
-- Reads through a batch of records
-- Returns a list of suggested annotations: `{record_id, text, start, end}`
-
-Fan out one subagent per failure mode (or per batch of records if the dataset is large). This runs in the background while the human keeps reviewing. When subagents return, merge their suggestions and push to the server.
+**Spawn one background subagent per failure mode.** The subagent gets the mode name, description, and example quotes, reads through all records, and returns a list of suggested annotations: `{record_id, text, start, end}`. One mode = one subagent, not one per record. Multiple modes run in parallel. This happens in the background while the human keeps reviewing. When subagents return, merge their suggestions and push to the server.
 
 Surface results in two buckets:
 1. **Already-annotated records**: "I found what looks like [mode] in record N, which you already reviewed." The reviewer may have missed it because the mode wasn't in their head yet (criteria drift).
@@ -231,14 +226,13 @@ After the human reviews a batch:
 3. Push new samples to the server. The app shows a banner.
 4. Tell the human what was added and why.
 
-### 5e: Multi-pass re-review
+### 5e: Encourage re-review
 
-Don't treat review as one-shot. The reviewer's criteria shift as they see more data (criteria drift). Build re-review into the loop:
+Don't treat review as one-shot. The reviewer's criteria shift as they see more data (criteria drift).
 
-1. **Track when each record was reviewed** and which failure modes existed at that time.
-2. **After discovering 2-3 new modes**, suggest the reviewer revisit earlier records. Those records were reviewed before the new modes were in the reviewer's head — they likely contain instances that were missed.
-3. **Agent suggestions handle part of this automatically** (5c scans already-reviewed records). But the human should also re-read with fresh eyes, because some things only a human notices.
-4. In the Progress view, surface which already-reviewed records have new agent suggestions — these are the highest-priority re-review candidates.
+The agent handles part of this: when a new mode is discovered, a background subagent scans all records and pushes suggestions (5c). Suggestions that land on already-reviewed records surface in the Progress view queue.
+
+But the agent can't catch everything. After the reviewer has gone through a batch and discovered new modes, explicitly encourage them to re-read earlier records with fresh eyes. Say something like: "You've found 3 new failure modes since you reviewed records 0-5. Worth a second pass — you'll likely spot things you missed the first time."
 
 ### 5f: Report and converge
 
