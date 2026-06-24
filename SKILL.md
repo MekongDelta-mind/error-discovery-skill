@@ -202,6 +202,13 @@ When new annotations appear:
 
 When a new failure mode is discovered (or an existing one gets clearer), the agent scans **all** records for instances of that mode — not just unreviewed ones. This is the key inner loop.
 
+**Use subagents (Agent tool) to parallelize this.** For each failure mode, spawn a subagent that:
+- Takes the failure mode name, description, and example quotes as context
+- Reads through a batch of records
+- Returns a list of suggested annotations: `{record_id, text, start, end}`
+
+Fan out one subagent per failure mode (or per batch of records if the dataset is large). This runs in the background while the human keeps reviewing. When subagents return, merge their suggestions and push to the server.
+
 Surface results in two buckets:
 1. **Already-annotated records**: "I found what looks like [mode] in record N, which you already reviewed." The reviewer may have missed it because the mode wasn't in their head yet (criteria drift).
 2. **Not-yet-annotated records**: "These unreviewed records also seem to have this pattern." Add them to the sample queue.
